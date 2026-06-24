@@ -15,7 +15,7 @@ describe('Authentication API Endpoint Tests', () => {
         name: 'Jane Doe',
         email: 'jane@example.com',
         phone: '1234567890',
-        password: 'password123',
+        password: 'Smart@123',
         role: 'customer'
       };
 
@@ -44,7 +44,7 @@ describe('Authentication API Endpoint Tests', () => {
       const mockUserPayload = {
         name: 'Jane Doe',
         email: 'jane@example.com',
-        password: 'password123'
+        password: 'Smart@123'
       };
 
       User.findOne.mockResolvedValue({ email: 'jane@example.com' }); // User exists
@@ -63,7 +63,7 @@ describe('Authentication API Endpoint Tests', () => {
     it('should authenticate user and return tokens', async () => {
       const mockLoginPayload = {
         email: 'jane@example.com',
-        password: 'password123'
+        password: 'Smart@123'
       };
 
       const mockMatchPassword = jest.fn().mockResolvedValue(true);
@@ -93,7 +93,7 @@ describe('Authentication API Endpoint Tests', () => {
     it('should reject invalid credentials', async () => {
       const mockLoginPayload = {
         email: 'jane@example.com',
-        password: 'wrongpassword'
+        password: 'Wrong@123'
       };
 
       const mockMatchPassword = jest.fn().mockResolvedValue(false);

@@ -16,7 +16,10 @@ const registerSchema = Joi.object({
   name: Joi.string().min(2).max(50).required(),
   email: Joi.string().email().required(),
   phone: Joi.string().allow('').optional(),
-  password: Joi.string().min(6).required(),
+  password: Joi.string()
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]|\\:;"'<>,.?/-]).{8,}$/)
+    .message('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.')
+    .required(),
   role: Joi.string().valid('customer', 'admin').default('customer')
 });
 

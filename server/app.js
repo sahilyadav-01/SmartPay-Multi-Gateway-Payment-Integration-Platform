@@ -32,8 +32,18 @@ const apiLimiter = rateLimit({
   message: { success: false, message: 'Too many requests from this IP, please try again after 15 minutes.' }
 });
 
-// Apply rate limiter to all APIs (except webhooks if needed)
+// Rate Limiter for Login Endpoint (PRD: max 5 attempts per 15 mins)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many failed attempts. Account locked for 15 minutes.' }
+});
+
+// Apply rate limiters to APIs
 if (process.env.NODE_ENV !== 'test') {
+  app.use('/api/auth/login', loginLimiter);
   app.use('/api/', apiLimiter);
 }
 

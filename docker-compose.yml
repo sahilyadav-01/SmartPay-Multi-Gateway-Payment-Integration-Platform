@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # Database Service container mapping
+  db:
+    image: mongo:6.0
+    container_name: smartpay-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - smartpay-network
+
+  # Express Backend Service Container
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: smartpay-backend-server
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://db:27017/smartpay
+      - JWT_SECRET=super_secret_jwt_sign_key_smartpay_2026
+      - JWT_REFRESH_SECRET=super_secret_refresh_jwt_sign_key_smartpay_2026
+    depends_on:
+      - db
+    networks:
+      - smartpay-network
+
+networks:
+  smartpay-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+    driver: local
