@@ -19,6 +19,54 @@ const seedAdminUser = async () => {
   }
 };
 
+const seedRoutingRules = async () => {
+  try {
+    const RoutingRule = require('../models/RoutingRule');
+    const ruleCount = await RoutingRule.countDocuments();
+    if (ruleCount === 0) {
+      console.log('No routing rules found. Seeding default routing rules...');
+      await RoutingRule.create([
+        {
+          name: 'Stripe for USD Transactions',
+          conditions: {
+            currency: 'USD',
+            minAmount: 0,
+            maxAmount: 1000000
+          },
+          targetGateway: 'stripe',
+          priority: 10,
+          isActive: true
+        },
+        {
+          name: 'Razorpay for INR Transactions',
+          conditions: {
+            currency: 'INR',
+            minAmount: 0,
+            maxAmount: 10000000
+          },
+          targetGateway: 'razorpay',
+          priority: 20,
+          isActive: true
+        },
+        {
+          name: 'Stripe High-Value Transactions Fallback',
+          conditions: {
+            currency: 'ANY',
+            minAmount: 5000,
+            maxAmount: 100000000
+          },
+          targetGateway: 'stripe',
+          priority: 5,
+          isActive: true
+        }
+      ]);
+      console.log('Default routing rules seeded successfully.');
+    }
+  } catch (err) {
+    console.error(`Failed to seed routing rules: ${err.message}`);
+  }
+};
+
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/smartpay';
   try {
@@ -27,6 +75,7 @@ const connectDB = async () => {
     });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     await seedAdminUser();
+    await seedRoutingRules();
     return conn;
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
@@ -39,6 +88,7 @@ const connectDB = async () => {
         const conn = await mongoose.connect(memoryUri);
         console.log(`MongoDB Connected (In-Memory): ${conn.connection.host}`);
         await seedAdminUser();
+        await seedRoutingRules();
         return conn;
       } catch (memError) {
         console.error(`In-Memory Database Connection Error: ${memError.message}`);

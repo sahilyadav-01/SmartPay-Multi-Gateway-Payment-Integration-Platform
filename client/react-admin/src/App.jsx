@@ -5,6 +5,7 @@ import Products from './views/Products';
 import Coupons from './views/Coupons';
 import Transactions from './views/Transactions';
 import Gateways from './views/Gateways';
+import RoutingRules from './views/RoutingRules';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -217,6 +218,11 @@ export default function App() {
               <span className="nav-text">Gateway Configuration</span>
             </a>
           </li>
+          <li className={`nav-item ${activePanel === 'routing' ? 'active' : ''}`} onClick={() => setActivePanel('routing')}>
+            <a className="nav-link">
+              <span className="nav-text">Smart Routing</span>
+            </a>
+          </li>
         </nav>
         
         <div className="sidebar-footer" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
@@ -253,6 +259,7 @@ export default function App() {
           {activePanel === 'coupons' && <Coupons />}
           {activePanel === 'transactions' && <Transactions />}
           {activePanel === 'gateways' && <Gateways />}
+          {activePanel === 'routing' && <RoutingRules />}
         </section>
       </main>
     </div>

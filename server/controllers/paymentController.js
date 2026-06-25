@@ -9,6 +9,7 @@ const {
 } = require('../services/gatewayService');
 const { generateInvoice } = require('../services/invoiceService');
 const { sendEmail } = require('../services/emailService');
+const routingService = require('../services/routingService');
 
 // @desc    Initiate Razorpay payment order
 // @route   POST /api/payments/razorpay/order
@@ -200,9 +201,69 @@ const confirmStripePayment = async (req, res) => {
   }
 };
 
+// @desc    Unified checkout endpoint that dynamically routes and initiates payment
+// @route   POST /api/payments/checkout
+// @access  Private
+const checkout = async (req, res) => {
+  try {
+    const { currency } = req.body;
+    if (!currency) {
+      return res.status(400).json({ success: false, message: 'Please specify currency' });
+    }
+
+    const order = await Order.findOne({ userId: req.user._id, status: 'pending' });
+    if (!order || order.items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Your cart is empty' });
+    }
+
+    // Evaluate route to choose target gateway
+    const selectedGateway = await routingService.evaluateRoute(order.amount, currency);
+
+    let paymentData = {};
+
+    if (selectedGateway === 'stripe') {
+      const intent = await createStripePaymentIntent(order.amount, currency, req.user.email);
+      order.orderId = intent.id;
+      order.gateway = 'stripe';
+      await order.save();
+
+      paymentData = {
+        gateway: 'stripe',
+        clientSecret: intent.client_secret,
+        intentId: intent.id,
+        amount: order.amount,
+        currency
+      };
+    } else if (selectedGateway === 'razorpay') {
+      const razorpayOrder = await createRazorpayOrder(order.amount, currency);
+      order.orderId = razorpayOrder.id;
+      order.gateway = 'razorpay';
+      await order.save();
+
+      paymentData = {
+        gateway: 'razorpay',
+        key: process.env.RAZORPAY_KEY_ID || 'rzp_test_key_placeholder',
+        orderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency
+      };
+    } else {
+      return res.status(400).json({ success: false, message: `Unsupported target gateway: ${selectedGateway}` });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: paymentData
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   initiateRazorpayOrder,
   verifyRazorpayPayment,
   initiateStripeIntent,
-  confirmStripePayment
+  confirmStripePayment,
+  checkout
 };

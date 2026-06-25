@@ -57,6 +57,7 @@ const refundRoutes = require('./routes/refundRoutes');
 const couponRoutes = require('./routes/couponRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const routingRoutes = require('./routes/routingRoutes');
 
 // Mount Routers
 app.use('/api/auth', authRoutes);
@@ -68,6 +69,7 @@ app.use('/api/refunds', refundRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/routing-rules', routingRoutes);
 
 // Base Endpoint
 app.get('/', (req, res) => {

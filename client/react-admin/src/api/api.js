@@ -99,5 +99,28 @@ export const api = {
     list: async () => {
       return await request('/api/refunds/history');
     }
+  },
+
+  routing: {
+    list: async () => {
+      return await request('/api/routing-rules');
+    },
+    create: async (ruleData) => {
+      return await request('/api/routing-rules', {
+        method: 'POST',
+        body: JSON.stringify(ruleData)
+      });
+    },
+    update: async (id, ruleData) => {
+      return await request(`/api/routing-rules/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(ruleData)
+      });
+    },
+    delete: async (id) => {
+      return await request(`/api/routing-rules/${id}`, {
+        method: 'DELETE'
+      });
+    }
   }
 };

@@ -53,6 +53,10 @@ const OrderSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  gateway: {
+    type: String,
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now

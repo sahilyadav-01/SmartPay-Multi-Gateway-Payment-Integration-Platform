@@ -6,7 +6,8 @@ const {
   initiateRazorpayOrder,
   verifyRazorpayPayment,
   initiateStripeIntent,
-  confirmStripePayment
+  confirmStripePayment,
+  checkout
 } = require('../controllers/paymentController');
 
 const router = express.Router();
@@ -29,5 +30,6 @@ router.post('/razorpay/verify', validate(verifyRazorpaySchema), verifyRazorpayPa
 
 router.post('/stripe/intent', initiateStripeIntent);
 router.post('/stripe/confirm', validate(confirmStripeSchema), confirmStripePayment);
+router.post('/checkout', checkout);
 
 module.exports = router;
