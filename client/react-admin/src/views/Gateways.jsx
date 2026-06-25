@@ -1,77 +1,192 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { api } from '../api/api';
 
 export default function Gateways() {
-  const [stripeActive, setStripeActive] = useState(true);
-  const [razorpayActive, setRazorpayActive] = useState(true);
-  const [paypalActive, setPaypalActive] = useState(false);
+  const [gatewayHealth, setGatewayHealth] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    alert('Gateway Configurations Saved successfully (Local Simulator and Sandbox Updated)');
+  const fetchHealth = async () => {
+    try {
+      const res = await api.gateways.getHealthStatus();
+      if (res.success) {
+        setGatewayHealth(res.data);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to fetch gateway health status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHealth();
+  }, []);
+
+  const handleToggleStatus = async (name, currentStatus) => {
+    const nextStatus = currentStatus === 'online' ? 'offline' : 'online';
+    try {
+      setLoading(true);
+      const res = await api.gateways.toggleHealthStatus(name, nextStatus);
+      if (res.success) {
+        fetchHealth();
+        alert(`Gateway "${name}" set to ${nextStatus.toUpperCase()} successfully.`);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to toggle status');
+      setLoading(false);
+    }
+  };
+
+  const getGatewayConfig = (name) => {
+    const health = gatewayHealth.find(g => g.name === name);
+    return {
+      status: health?.status || 'online',
+      latency: health?.latencyMs || 120,
+      errorRate: health?.errorRate || 0,
+    };
   };
 
   return (
-    <div className="glass-panel" style={{ maxWidth: 800 }}>
-      <h3 style={{ marginBottom: 20 }}>Gateway Integrations Config</h3>
+    <div className="glass-panel" style={{ maxWidth: 850 }}>
+      <h3 style={{ marginBottom: 20 }}>Payment Gateway Channels & Health Overrides</h3>
       
-      <form onSubmit={handleSave}>
-        {/* Stripe */}
-        <div style={{ padding: 20, background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 12, marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-            <h4 style={{ margin: 0, color: 'var(--stripe-color)' }}>Stripe Integration</h4>
-            <label className="switch">
-              <input type="checkbox" checked={stripeActive} onChange={() => setStripeActive(!stripeActive)} />
-              <span className="slider"></span>
-            </label>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Stripe Publishable Key</label>
-            <input type="text" className="form-input" placeholder="pk_test_stripe_..." defaultValue="pk_test_stripe_51N3a4e9z8Fq012x" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Stripe Secret Key</label>
-            <input type="password" className="form-input" placeholder="sk_test_stripe_..." defaultValue="••••••••••••••••••••••••••••••••" />
-          </div>
-        </div>
+      {error && <div style={{ color: 'var(--error-color)', marginBottom: 20 }}>{error}</div>}
 
-        {/* Razorpay */}
-        <div style={{ padding: 20, background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 12, marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-            <h4 style={{ margin: 0, color: 'var(--razorpay-color)' }}>Razorpay (Primary Gateway)</h4>
-            <label className="switch">
-              <input type="checkbox" checked={razorpayActive} onChange={() => setRazorpayActive(!razorpayActive)} />
-              <span className="slider"></span>
-            </label>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Razorpay Key ID</label>
-            <input type="text" className="form-input" placeholder="rzp_test_..." defaultValue="rzp_test_key_51N3a4e9" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Razorpay Key Secret</label>
-            <input type="password" className="form-input" placeholder="rzp_secret_..." defaultValue="••••••••••••••••••••••••" />
-          </div>
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        
+        {/* Stripe Configuration card */}
+        {(() => {
+          const config = getGatewayConfig('stripe');
+          return (
+            <div style={{ padding: 20, background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, flexWrap: 'wrap', gap: 10 }}>
+                <div>
+                  <h4 style={{ margin: 0, color: 'var(--stripe-color)', display: 'inline-block', marginRight: 10 }}>Stripe Integration</h4>
+                  <span className={`stream-status-badge badge-${config.status === 'online' ? 'success' : 'failed'}`}>
+                    {config.status === 'online' ? 'ONLINE / HEALTHY' : 'SIMULATED OUTAGE / DOWN'}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => handleToggleStatus('stripe', config.status)}
+                  className="btn btn-secondary" 
+                  style={{ padding: '8px 12px', fontSize: 12, color: config.status === 'online' ? 'var(--error-color)' : 'var(--success-color)' }}
+                  disabled={loading}
+                >
+                  {config.status === 'online' ? 'Simulate Outage / Set Down' : 'Restore Online / Healthy'}
+                </button>
+              </div>
 
-        {/* PayPal */}
-        <div style={{ padding: 20, background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 12, marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-            <h4 style={{ margin: 0, color: 'var(--paypal-color)' }}>PayPal Integration</h4>
-            <label className="switch">
-              <input type="checkbox" checked={paypalActive} onChange={() => setPaypalActive(!paypalActive)} />
-              <span className="slider"></span>
-            </label>
-          </div>
-          <div className="form-group">
-            <label className="form-label">PayPal Client ID</label>
-            <input type="text" className="form-input" placeholder="paypal_client_id_..." defaultValue="paypal_client_id_placeholder" />
-          </div>
-        </div>
+              <div style={{ display: 'flex', gap: 20, marginBottom: 15, background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, fontSize: 13 }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Average Latency:</span>{' '}
+                  <strong>{config.status === 'online' ? `${config.latency}ms` : 'Timeout'}</strong>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Error Rate:</span>{' '}
+                  <strong>{config.errorRate}%</strong>
+                </div>
+              </div>
 
-        <button type="submit" className="btn">
-          Save Settings
-        </button>
-      </form>
+              <div className="form-group">
+                <label className="form-label">Stripe Publishable Key</label>
+                <input type="text" className="form-input" placeholder="pk_test_stripe_..." defaultValue="pk_test_stripe_51N3a4e9z8Fq012x" disabled />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Stripe Secret Key</label>
+                <input type="password" className="form-input" placeholder="sk_test_stripe_..." defaultValue="••••••••••••••••••••••••••••••••" disabled />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Razorpay Configuration card */}
+        {(() => {
+          const config = getGatewayConfig('razorpay');
+          return (
+            <div style={{ padding: 20, background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, flexWrap: 'wrap', gap: 10 }}>
+                <div>
+                  <h4 style={{ margin: 0, color: 'var(--razorpay-color)', display: 'inline-block', marginRight: 10 }}>Razorpay (Primary India Route)</h4>
+                  <span className={`stream-status-badge badge-${config.status === 'online' ? 'success' : 'failed'}`}>
+                    {config.status === 'online' ? 'ONLINE / HEALTHY' : 'SIMULATED OUTAGE / DOWN'}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => handleToggleStatus('razorpay', config.status)}
+                  className="btn btn-secondary" 
+                  style={{ padding: '8px 12px', fontSize: 12, color: config.status === 'online' ? 'var(--error-color)' : 'var(--success-color)' }}
+                  disabled={loading}
+                >
+                  {config.status === 'online' ? 'Simulate Outage / Set Down' : 'Restore Online / Healthy'}
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: 20, marginBottom: 15, background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, fontSize: 13 }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Average Latency:</span>{' '}
+                  <strong>{config.status === 'online' ? `${config.latency}ms` : 'Timeout'}</strong>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Error Rate:</span>{' '}
+                  <strong>{config.errorRate}%</strong>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Razorpay Key ID</label>
+                <input type="text" className="form-input" placeholder="rzp_test_..." defaultValue="rzp_test_key_51N3a4e9" disabled />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Razorpay Key Secret</label>
+                <input type="password" className="form-input" placeholder="rzp_secret_..." defaultValue="••••••••••••••••••••••••" disabled />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* PayPal Configuration card */}
+        {(() => {
+          const config = getGatewayConfig('paypal');
+          return (
+            <div style={{ padding: 20, background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, flexWrap: 'wrap', gap: 10 }}>
+                <div>
+                  <h4 style={{ margin: 0, color: 'var(--paypal-color)', display: 'inline-block', marginRight: 10 }}>PayPal Integration</h4>
+                  <span className={`stream-status-badge badge-${config.status === 'online' ? 'success' : 'failed'}`}>
+                    {config.status === 'online' ? 'ONLINE / HEALTHY' : 'SIMULATED OUTAGE / DOWN'}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => handleToggleStatus('paypal', config.status)}
+                  className="btn btn-secondary" 
+                  style={{ padding: '8px 12px', fontSize: 12, color: config.status === 'online' ? 'var(--error-color)' : 'var(--success-color)' }}
+                  disabled={loading}
+                >
+                  {config.status === 'online' ? 'Simulate Outage / Set Down' : 'Restore Online / Healthy'}
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: 20, marginBottom: 15, background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, fontSize: 13 }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Average Latency:</span>{' '}
+                  <strong>{config.status === 'online' ? `${config.latency}ms` : 'Timeout'}</strong>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Error Rate:</span>{' '}
+                  <strong>{config.errorRate}%</strong>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">PayPal Client ID</label>
+                <input type="text" className="form-input" placeholder="paypal_client_id_..." defaultValue="paypal_client_id_placeholder" disabled />
+              </div>
+            </div>
+          );
+        })()}
+
+      </div>
     </div>
   );
 }

@@ -67,6 +67,24 @@ const seedRoutingRules = async () => {
   }
 };
 
+const seedGatewayStatuses = async () => {
+  try {
+    const GatewayStatus = require('../models/GatewayStatus');
+    const count = await GatewayStatus.countDocuments();
+    if (count === 0) {
+      console.log('No gateway statuses found. Seeding default healthy gateway statuses...');
+      await GatewayStatus.create([
+        { name: 'stripe', status: 'online', latencyMs: 120, errorRate: 0 },
+        { name: 'razorpay', status: 'online', latencyMs: 95, errorRate: 0 },
+        { name: 'paypal', status: 'online', latencyMs: 210, errorRate: 0 }
+      ]);
+      console.log('Default gateway statuses seeded successfully.');
+    }
+  } catch (err) {
+    console.error(`Failed to seed gateway statuses: ${err.message}`);
+  }
+};
+
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/smartpay';
   try {
@@ -76,6 +94,7 @@ const connectDB = async () => {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     await seedAdminUser();
     await seedRoutingRules();
+    await seedGatewayStatuses();
     return conn;
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
@@ -89,6 +108,7 @@ const connectDB = async () => {
         console.log(`MongoDB Connected (In-Memory): ${conn.connection.host}`);
         await seedAdminUser();
         await seedRoutingRules();
+        await seedGatewayStatuses();
         return conn;
       } catch (memError) {
         console.error(`In-Memory Database Connection Error: ${memError.message}`);

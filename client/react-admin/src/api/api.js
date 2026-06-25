@@ -184,5 +184,17 @@ export const api = {
     getInvoiceUrl: (orderId) => {
       return `/api/payments/invoice/${orderId}`;
     }
+  },
+
+  gateways: {
+    getHealthStatus: async () => {
+      return await request('/api/gateways/status');
+    },
+    toggleHealthStatus: async (name, status) => {
+      return await request('/api/gateways/status/toggle', {
+        method: 'POST',
+        body: JSON.stringify({ name, status })
+      });
+    }
   }
 };

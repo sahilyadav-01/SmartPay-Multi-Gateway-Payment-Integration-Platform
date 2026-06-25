@@ -2,12 +2,14 @@ const request = require('supertest');
 const app = require('../app');
 const RoutingRule = require('../models/RoutingRule');
 const Order = require('../models/Order');
+const GatewayStatus = require('../models/GatewayStatus');
 const routingService = require('../services/routingService');
 const gatewayService = require('../services/gatewayService');
 
 jest.mock('../models/RoutingRule');
 jest.mock('../models/Order');
 jest.mock('../models/User'); // Mock User dependencies
+jest.mock('../models/GatewayStatus');
 jest.mock('../services/gatewayService');
 
 // Mock protect middleware to bypass auth during test
@@ -19,6 +21,12 @@ jest.mock('../middleware/auth', () => ({
 }));
 
 describe('Smart Routing Engine and APIs', () => {
+  beforeEach(() => {
+    GatewayStatus.findOne.mockImplementation(({ name }) => {
+      return Promise.resolve({ name, status: 'online', latencyMs: 120, errorRate: 0 });
+    });
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });
