@@ -22,6 +22,10 @@ const confirmStripeSchema = Joi.object({
   paymentIntentId: Joi.string().required()
 });
 
+const checkoutSchema = Joi.object({
+  currency: Joi.string().uppercase().length(3).required()
+});
+
 // Protect all routing endpoints
 router.use(protect);
 
@@ -30,6 +34,6 @@ router.post('/razorpay/verify', validate(verifyRazorpaySchema), verifyRazorpayPa
 
 router.post('/stripe/intent', initiateStripeIntent);
 router.post('/stripe/confirm', validate(confirmStripeSchema), confirmStripePayment);
-router.post('/checkout', checkout);
+router.post('/checkout', validate(checkoutSchema), checkout);
 
 module.exports = router;

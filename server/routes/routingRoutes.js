@@ -1,8 +1,22 @@
 const express = require('express');
+const Joi = require('joi');
 const RoutingRule = require('../models/RoutingRule');
 const { protect } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 
 const router = express.Router();
+
+const ruleSchema = Joi.object({
+  name: Joi.string().required().trim().max(100),
+  conditions: Joi.object({
+    currency: Joi.string().uppercase().required().default('ANY'),
+    minAmount: Joi.number().min(0).default(0),
+    maxAmount: Joi.number().min(0).default(Infinity)
+  }).required(),
+  targetGateway: Joi.string().valid('stripe', 'razorpay', 'paypal').required(),
+  priority: Joi.number().integer().min(0).default(0),
+  isActive: Joi.boolean().default(true)
+});
 
 // Middleware to ensure user is admin
 const authorizeAdmin = (req, res, next) => {
@@ -29,7 +43,7 @@ router.get('/', async (req, res) => {
 
 // @desc    Create new routing rule
 // @route   POST /api/routing-rules
-router.post('/', async (req, res) => {
+router.post('/', validate(ruleSchema), async (req, res) => {
   try {
     const rule = await RoutingRule.create(req.body);
     res.status(201).json({ success: true, data: rule });
@@ -40,7 +54,7 @@ router.post('/', async (req, res) => {
 
 // @desc    Update routing rule
 // @route   PUT /api/routing-rules/:id
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(ruleSchema), async (req, res) => {
   try {
     let rule = await RoutingRule.findById(req.params.id);
     if (!rule) {
