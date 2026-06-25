@@ -260,10 +260,65 @@ const checkout = async (req, res) => {
   }
 };
 
+// @desc    Get logged in user transaction history
+// @route   GET /api/payments/transactions
+// @access  Private
+const getUserTransactions = async (req, res) => {
+  try {
+    const transactions = await Transaction.find({ userId: req.user._id })
+      .populate({
+        path: 'orderId',
+        populate: { path: 'items.productId', model: 'Product' }
+      })
+      .sort({ timestamp: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      data: transactions
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Securely download PDF invoice
+// @route   GET /api/payments/invoice/:orderId
+// @access  Private
+const downloadInvoice = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Verify ownership or admin role
+    if (order.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to download this invoice' });
+    }
+
+    const path = require('path');
+    const fs = require('fs');
+    const invoicePath = path.join(__dirname, '../../invoices', `invoice_${orderId}.pdf`);
+
+    if (!fs.existsSync(invoicePath)) {
+      return res.status(404).json({ success: false, message: 'Invoice file does not exist' });
+    }
+
+    res.download(invoicePath);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   initiateRazorpayOrder,
   verifyRazorpayPayment,
   initiateStripeIntent,
   confirmStripePayment,
-  checkout
+  checkout,
+  getUserTransactions,
+  downloadInvoice
 };

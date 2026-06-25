@@ -38,6 +38,17 @@ export const api = {
       }
       return res;
     },
+    register: async (name, email, password) => {
+      const res = await request('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password, role: 'customer' })
+      });
+      if (res.success && res.accessToken) {
+        localStorage.setItem('smartpay_admin_token', res.accessToken);
+        localStorage.setItem('smartpay_admin_user', JSON.stringify(res.user));
+      }
+      return res;
+    },
     logout: () => {
       localStorage.removeItem('smartpay_admin_token');
       localStorage.removeItem('smartpay_admin_user');
@@ -86,6 +97,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(couponData)
       });
+    },
+    apply: async (code) => {
+      return await request('/api/coupons/apply', {
+        method: 'POST',
+        body: JSON.stringify({ code })
+      });
     }
   },
 
@@ -121,6 +138,51 @@ export const api = {
       return await request(`/api/routing-rules/${id}`, {
         method: 'DELETE'
       });
+    }
+  },
+
+  cart: {
+    get: async () => {
+      return await request('/api/cart');
+    },
+    add: async (productId, quantity = 1) => {
+      return await request('/api/cart/add', {
+        method: 'POST',
+        body: JSON.stringify({ productId, quantity })
+      });
+    },
+    remove: async (productId) => {
+      return await request('/api/cart/remove', {
+        method: 'DELETE',
+        body: JSON.stringify({ productId })
+      });
+    }
+  },
+
+  payments: {
+    checkout: async (currency) => {
+      return await request('/api/payments/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ currency })
+      });
+    },
+    verifyRazorpay: async (verificationData) => {
+      return await request('/api/payments/razorpay/verify', {
+        method: 'POST',
+        body: JSON.stringify(verificationData)
+      });
+    },
+    confirmStripe: async (paymentIntentId) => {
+      return await request('/api/payments/stripe/confirm', {
+        method: 'POST',
+        body: JSON.stringify({ paymentIntentId })
+      });
+    },
+    listTransactions: async () => {
+      return await request('/api/payments/transactions');
+    },
+    getInvoiceUrl: (orderId) => {
+      return `/api/payments/invoice/${orderId}`;
     }
   }
 };
