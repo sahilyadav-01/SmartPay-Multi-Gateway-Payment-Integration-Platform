@@ -196,5 +196,16 @@ export const api = {
         body: JSON.stringify({ name, status })
       });
     }
+  },
+
+  webhooks: {
+    getLogs: async () => {
+      return await request('/api/webhooks/logs');
+    },
+    retryWebhook: async (id) => {
+      return await request(`/api/webhooks/logs/${id}/retry`, {
+        method: 'POST'
+      });
+    }
   }
 };

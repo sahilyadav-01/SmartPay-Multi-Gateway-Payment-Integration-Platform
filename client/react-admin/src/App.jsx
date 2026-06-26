@@ -7,6 +7,7 @@ import Transactions from './views/Transactions';
 import Gateways from './views/Gateways';
 import RoutingRules from './views/RoutingRules';
 import CustomerPortal from './views/CustomerPortal';
+import WebhookLogs from './views/WebhookLogs';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -274,6 +275,11 @@ export default function App() {
               <span className="nav-text">Smart Routing</span>
             </a>
           </li>
+          <li className={`nav-item ${activePanel === 'webhooks' ? 'active' : ''}`} onClick={() => setActivePanel('webhooks')}>
+            <a className="nav-link">
+              <span className="nav-text">Webhook Audit</span>
+            </a>
+          </li>
         </nav>
         
         <div className="sidebar-footer" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}>
@@ -311,6 +317,7 @@ export default function App() {
           {activePanel === 'transactions' && <Transactions />}
           {activePanel === 'gateways' && <Gateways />}
           {activePanel === 'routing' && <RoutingRules />}
+          {activePanel === 'webhooks' && <WebhookLogs />}
         </section>
       </main>
     </div>

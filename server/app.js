@@ -59,6 +59,7 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const routingRoutes = require('./routes/routingRoutes');
 const gatewayStatusRoutes = require('./routes/gatewayStatusRoutes');
+const webhookLogRoutes = require('./routes/webhookLogRoutes');
 
 // Mount Routers
 app.use('/api/auth', authRoutes);
@@ -66,6 +67,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/webhooks/logs', webhookLogRoutes);
 app.use('/api/refunds', refundRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
