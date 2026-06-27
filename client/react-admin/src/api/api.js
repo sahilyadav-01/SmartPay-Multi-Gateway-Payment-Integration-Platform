@@ -138,6 +138,12 @@ export const api = {
       return await request(`/api/routing-rules/${id}`, {
         method: 'DELETE'
       });
+    },
+    simulate: async (amount, currency, statusOverrides) => {
+      return await request('/api/routing-rules/simulate', {
+        method: 'POST',
+        body: JSON.stringify({ amount, currency, statusOverrides })
+      });
     }
   },
 

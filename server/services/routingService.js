@@ -66,6 +66,102 @@ const evaluateRoute = async (amount, currency) => {
   }
 };
 
+const simulateRoute = async (amount, currency, statusOverrides = {}) => {
+  const trace = [];
+  try {
+    trace.push(`[SIMULATOR] Starting route evaluation dry-run for ${amount} ${currency}.`);
+
+    const stripeDb = await GatewayStatus.findOne({ name: 'stripe' });
+    const razorpayDb = await GatewayStatus.findOne({ name: 'razorpay' });
+    const paypalDb = await GatewayStatus.findOne({ name: 'paypal' });
+
+    const isOnline = (name) => {
+      if (statusOverrides[name] !== undefined) {
+        trace.push(`[SIMULATOR] Gateway "${name}" health status overridden to: ${statusOverrides[name].toUpperCase()}.`);
+        return statusOverrides[name] === 'online';
+      }
+      if (name === 'stripe') return !stripeDb || stripeDb.status === 'online';
+      if (name === 'razorpay') return !razorpayDb || razorpayDb.status === 'online';
+      if (name === 'paypal') return !paypalDb || paypalDb.status === 'online';
+      return true;
+    };
+
+    trace.push(`[SIMULATOR] Gateway health status checks: Stripe=${isOnline('stripe') ? 'ONLINE' : 'OFFLINE'}, Razorpay=${isOnline('razorpay') ? 'ONLINE' : 'OFFLINE'}, PayPal=${isOnline('paypal') ? 'ONLINE' : 'OFFLINE'}.`);
+
+    const activeRules = await RoutingRule.find({ isActive: true }).sort({ priority: 1 });
+    trace.push(`[SIMULATOR] Fetched ${activeRules.length} active routing rules for evaluation.`);
+
+    for (const rule of activeRules) {
+      const { currency: targetCurrency, minAmount, maxAmount } = rule.conditions;
+
+      const currencyMatch = targetCurrency === 'ANY' || targetCurrency.toUpperCase() === currency.toUpperCase();
+      const amountMatch = amount >= minAmount && amount <= maxAmount;
+
+      trace.push(`[SIMULATOR] Checking Rule "${rule.name}" (Priority ${rule.priority}). Conditions: Currency=${targetCurrency}, Min=${minAmount}, Max=${maxAmount}.`);
+
+      if (currencyMatch && amountMatch) {
+        trace.push(`[SIMULATOR] MATCH FOUND: Rule "${rule.name}" matched. Target Gateway: ${rule.targetGateway.toUpperCase()}.`);
+        let chosenGateway = rule.targetGateway;
+
+        if (isOnline(chosenGateway)) {
+          trace.push(`[SIMULATOR] Gateway "${chosenGateway}" is ONLINE. Routing decision completed.`);
+          return { gateway: chosenGateway, trace };
+        } else {
+          const alternative = chosenGateway === 'stripe' ? 'razorpay' : 'stripe';
+          trace.push(`[SIMULATOR] WARNING: Target gateway "${chosenGateway}" is OFFLINE. Triggering failover check to alternate gateway: ${alternative.toUpperCase()}.`);
+          
+          if (isOnline(alternative)) {
+            trace.push(`[SIMULATOR] Failover SUCCESS: Alternate gateway "${alternative}" is ONLINE. Re-routing checkout to alternate.`);
+            return { gateway: alternative, trace };
+          } else {
+            trace.push(`[SIMULATOR] WARNING: Alternate gateway "${alternative}" is also OFFLINE. Attempting PayPal fallback.`);
+            if (isOnline('paypal')) {
+              trace.push(`[SIMULATOR] PayPal is ONLINE. Routing checkout to PayPal.`);
+              return { gateway: 'paypal', trace };
+            } else {
+              trace.push(`[SIMULATOR] ERROR: All routes (Stripe, Razorpay, PayPal) are OFFLINE. Routing will fallback to Stripe under degraded state.`);
+              return { gateway: 'stripe', trace };
+            }
+          }
+        }
+      } else {
+        const mismatchReason = [];
+        if (!currencyMatch) mismatchReason.push(`Currency mismatch (Expected: ${targetCurrency}, Got: ${currency})`);
+        if (!amountMatch) mismatchReason.push(`Amount mismatch (Range: ${minAmount}-${maxAmount}, Got: ${amount})`);
+        trace.push(`[SIMULATOR] Rule "${rule.name}" did not match: ${mismatchReason.join(', ')}.`);
+      }
+    }
+
+    let defaultGateway = currency.toUpperCase() === 'INR' ? 'razorpay' : 'stripe';
+    trace.push(`[SIMULATOR] No active rules matched. Applying default currency routing policy for ${currency}. Default gateway: ${defaultGateway.toUpperCase()}.`);
+
+    if (!isOnline(defaultGateway)) {
+      const alt = defaultGateway === 'stripe' ? 'razorpay' : 'stripe';
+      trace.push(`[SIMULATOR] WARNING: Default gateway "${defaultGateway}" is OFFLINE. Checking alternative default: ${alt.toUpperCase()}.`);
+      if (isOnline(alt)) {
+        trace.push(`[SIMULATOR] Failover SUCCESS: Shifting default route to healthy alternative: ${alt.toUpperCase()}.`);
+        defaultGateway = alt;
+      } else {
+        trace.push(`[SIMULATOR] WARNING: Alternative default "${alt}" is also OFFLINE. Attempting PayPal default fallback.`);
+        if (isOnline('paypal')) {
+          trace.push(`[SIMULATOR] PayPal is ONLINE. Routing to PayPal.`);
+          defaultGateway = 'paypal';
+        } else {
+          trace.push(`[SIMULATOR] ERROR: All default routes are OFFLINE. Defaulting to Stripe.`);
+          defaultGateway = 'stripe';
+        }
+      }
+    }
+
+    trace.push(`[SIMULATOR] Routing decision completed to: ${defaultGateway.toUpperCase()}.`);
+    return { gateway: defaultGateway, trace };
+  } catch (err) {
+    trace.push(`[SIMULATOR] CRITICAL ERROR during simulation: ${err.message}. Defaulting to Stripe.`);
+    return { gateway: 'stripe', trace };
+  }
+};
+
 module.exports = {
-  evaluateRoute
+  evaluateRoute,
+  simulateRoute
 };

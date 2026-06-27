@@ -3,6 +3,7 @@ const Joi = require('joi');
 const RoutingRule = require('../models/RoutingRule');
 const { protect } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { simulateRoute } = require('../services/routingService');
 
 const router = express.Router();
 
@@ -49,6 +50,27 @@ router.post('/', validate(ruleSchema), async (req, res) => {
     res.status(201).json({ success: true, data: rule });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// @desc    Simulate payment routing decision (dry-run)
+// @route   POST /api/routing-rules/simulate
+router.post('/simulate', async (req, res) => {
+  try {
+    const { amount, currency, statusOverrides } = req.body;
+    if (amount === undefined || !currency) {
+      return res.status(400).json({ success: false, message: 'Please specify amount and currency' });
+    }
+
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount < 0) {
+      return res.status(400).json({ success: false, message: 'Amount must be a non-negative number' });
+    }
+
+    const result = await simulateRoute(numericAmount, currency, statusOverrides || {});
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
