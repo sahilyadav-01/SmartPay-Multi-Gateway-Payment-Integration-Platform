@@ -76,12 +76,16 @@ const verifyRazorpayPayment = async (req, res) => {
       gateway: 'razorpay',
       transactionId: razorpay_payment_id,
       amount: order.amount,
-      currency: 'INR',
+      currency: order.currency || 'INR',
       status: 'success',
       feePct: 2.0,
       feeFixed: 0.0,
       customerEmail: req.user.email,
-      customerName: req.user.name
+      customerName: req.user.name,
+      originalAmount: order.originalAmount || order.amount,
+      fxRate: order.fxRate || 1,
+      fxMarkupPct: order.fxMarkupPct || 0,
+      fxMarkupFee: order.fxMarkupFee || 0
     });
 
     // Generate PDF Invoice asynchronously
@@ -93,7 +97,7 @@ const verifyRazorpayPayment = async (req, res) => {
       const html = `
         <h3>Payment Successful!</h3>
         <p>Dear ${req.user.name},</p>
-        <p>Thank you for your payment of <b>$${order.amount.toFixed(2)}</b>. Your transaction has been processed successfully.</p>
+        <p>Thank you for your payment of <b>${order.amount.toFixed(2)} ${order.currency || 'INR'}</b>. Your transaction has been processed successfully.</p>
         <p>Your Invoice is attached to this email.</p>
         <br/>
         <p>Best Regards,</p>
@@ -165,12 +169,16 @@ const confirmStripePayment = async (req, res) => {
       gateway: 'stripe',
       transactionId: paymentIntentId,
       amount: order.amount,
-      currency: 'USD',
+      currency: order.currency || 'USD',
       status: 'success',
       feePct: 2.9,
       feeFixed: 0.30,
       customerEmail: req.user.email,
-      customerName: req.user.name
+      customerName: req.user.name,
+      originalAmount: order.originalAmount || order.amount,
+      fxRate: order.fxRate || 1,
+      fxMarkupPct: order.fxMarkupPct || 0,
+      fxMarkupFee: order.fxMarkupFee || 0
     });
 
     // Generate Invoice and Email
@@ -180,7 +188,7 @@ const confirmStripePayment = async (req, res) => {
       const html = `
         <h3>Payment Successful!</h3>
         <p>Dear ${req.user.name},</p>
-        <p>Thank you for your payment of <b>$${order.amount.toFixed(2)}</b>. Your transaction has been processed successfully.</p>
+        <p>Thank you for your payment of <b>${order.amount.toFixed(2)} ${order.currency || 'USD'}</b>. Your transaction has been processed successfully.</p>
         <p>Your Invoice is attached to this email.</p>
         <br/>
         <p>Best Regards,</p>
@@ -216,13 +224,56 @@ const checkout = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Your cart is empty' });
     }
 
+    // Calculate base total from order items in USD
+    const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const gst = subtotal * 0.18;
+    const baseTotal = Math.max(0, parseFloat((subtotal + gst - (order.discount || 0)).toFixed(2)));
+
+    let finalAmount = baseTotal;
+    let fxRate = 1;
+    let fxMarkupPct = 0;
+    let fxMarkupFee = 0;
+
+    const baseCurrency = 'USD';
+    const targetCurrency = currency.toUpperCase();
+
+    if (targetCurrency !== baseCurrency) {
+      const FXConfig = require('../models/FXConfig');
+      const fxConfig = await FXConfig.findOne({
+        baseCurrency,
+        targetCurrency,
+        isActive: true
+      });
+
+      if (!fxConfig) {
+        return res.status(400).json({
+          success: false,
+          message: `FX configuration not found or inactive for conversion from ${baseCurrency} to ${targetCurrency}`
+        });
+      }
+
+      fxRate = fxConfig.exchangeRate;
+      fxMarkupPct = fxConfig.markupPercentage;
+      
+      const converted = baseTotal * fxRate;
+      fxMarkupFee = parseFloat((converted * (fxMarkupPct / 100)).toFixed(2));
+      finalAmount = parseFloat((converted + fxMarkupFee).toFixed(2));
+    }
+
+    order.amount = finalAmount;
+    order.currency = targetCurrency;
+    order.originalAmount = baseTotal;
+    order.fxRate = fxRate;
+    order.fxMarkupPct = fxMarkupPct;
+    order.fxMarkupFee = fxMarkupFee;
+
     // Evaluate route to choose target gateway
-    const selectedGateway = await routingService.evaluateRoute(order.amount, currency);
+    const selectedGateway = await routingService.evaluateRoute(finalAmount, targetCurrency);
 
     let paymentData = {};
 
     if (selectedGateway === 'stripe') {
-      const intent = await createStripePaymentIntent(order.amount, currency, req.user.email);
+      const intent = await createStripePaymentIntent(finalAmount, targetCurrency, req.user.email);
       order.orderId = intent.id;
       order.gateway = 'stripe';
       await order.save();
@@ -231,11 +282,11 @@ const checkout = async (req, res) => {
         gateway: 'stripe',
         clientSecret: intent.client_secret,
         intentId: intent.id,
-        amount: order.amount,
-        currency
+        amount: finalAmount,
+        currency: targetCurrency
       };
     } else if (selectedGateway === 'razorpay') {
-      const razorpayOrder = await createRazorpayOrder(order.amount, currency);
+      const razorpayOrder = await createRazorpayOrder(finalAmount, targetCurrency);
       order.orderId = razorpayOrder.id;
       order.gateway = 'razorpay';
       await order.save();
@@ -244,8 +295,8 @@ const checkout = async (req, res) => {
         gateway: 'razorpay',
         key: process.env.RAZORPAY_KEY_ID || 'rzp_test_key_placeholder',
         orderId: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        currency
+        amount: razorpayOrder.amount, // this is in paise!
+        currency: targetCurrency
       };
     } else {
       return res.status(400).json({ success: false, message: `Unsupported target gateway: ${selectedGateway}` });

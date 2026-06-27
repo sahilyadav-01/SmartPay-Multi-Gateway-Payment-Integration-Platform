@@ -40,6 +40,26 @@ const OrderSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  currency: {
+    type: String,
+    default: 'USD'
+  },
+  originalAmount: {
+    type: Number,
+    default: 0
+  },
+  fxRate: {
+    type: Number,
+    default: 1
+  },
+  fxMarkupPct: {
+    type: Number,
+    default: 0
+  },
+  fxMarkupFee: {
+    type: Number,
+    default: 0
+  },
   status: {
     type: String,
     enum: ['pending', 'captured', 'failed', 'refunded'],

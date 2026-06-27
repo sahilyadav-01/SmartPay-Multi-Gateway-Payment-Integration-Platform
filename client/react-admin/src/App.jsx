@@ -8,6 +8,7 @@ import Gateways from './views/Gateways';
 import RoutingRules from './views/RoutingRules';
 import CustomerPortal from './views/CustomerPortal';
 import WebhookLogs from './views/WebhookLogs';
+import FXMarkup from './views/FXMarkup';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -275,6 +276,11 @@ export default function App() {
               <span className="nav-text">Smart Routing</span>
             </a>
           </li>
+          <li className={`nav-item ${activePanel === 'fx' ? 'active' : ''}`} onClick={() => setActivePanel('fx')}>
+            <a className="nav-link">
+              <span className="nav-text">FX Markup Config</span>
+            </a>
+          </li>
           <li className={`nav-item ${activePanel === 'webhooks' ? 'active' : ''}`} onClick={() => setActivePanel('webhooks')}>
             <a className="nav-link">
               <span className="nav-text">Webhook Audit</span>
@@ -317,6 +323,7 @@ export default function App() {
           {activePanel === 'transactions' && <Transactions />}
           {activePanel === 'gateways' && <Gateways />}
           {activePanel === 'routing' && <RoutingRules />}
+          {activePanel === 'fx' && <FXMarkup />}
           {activePanel === 'webhooks' && <WebhookLogs />}
         </section>
       </main>

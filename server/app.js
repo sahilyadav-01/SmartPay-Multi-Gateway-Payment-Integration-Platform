@@ -60,6 +60,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const routingRoutes = require('./routes/routingRoutes');
 const gatewayStatusRoutes = require('./routes/gatewayStatusRoutes');
 const webhookLogRoutes = require('./routes/webhookLogRoutes');
+const fxRoutes = require('./routes/fxRoutes');
 
 // Mount Routers
 app.use('/api/auth', authRoutes);
@@ -74,6 +75,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/routing-rules', routingRoutes);
 app.use('/api/gateways/status', gatewayStatusRoutes);
+app.use('/api/fx-rules', fxRoutes);
 
 // Base Endpoint
 app.get('/', (req, res) => {

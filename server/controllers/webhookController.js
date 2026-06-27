@@ -28,12 +28,16 @@ const processRazorpayEvent = async (event, payload) => {
         orderId: order._id,
         gateway: 'razorpay',
         transactionId: paymentId,
-        amount: amount,
-        currency: paymentEntity.currency || 'INR',
+        amount: order.amount,
+        currency: order.currency || paymentEntity.currency || 'INR',
         status: 'success',
         feePct: 2.0,
         customerEmail: user ? user.email : '',
-        customerName: user ? user.name : ''
+        customerName: user ? user.name : '',
+        originalAmount: order.originalAmount || order.amount,
+        fxRate: order.fxRate || 1,
+        fxMarkupPct: order.fxMarkupPct || 0,
+        fxMarkupFee: order.fxMarkupFee || 0
       });
 
       // Send invoice
@@ -74,12 +78,16 @@ const processRazorpayEvent = async (event, payload) => {
         orderId: order._id,
         gateway: 'razorpay',
         transactionId: paymentId,
-        amount: paymentEntity.amount / 100,
-        currency: paymentEntity.currency || 'INR',
+        amount: order.amount,
+        currency: order.currency || paymentEntity.currency || 'INR',
         status: 'failed',
         failureReason: paymentEntity.error_description || 'Payment Failed',
         customerEmail: user ? user.email : '',
-        customerName: user ? user.name : ''
+        customerName: user ? user.name : '',
+        originalAmount: order.originalAmount || order.amount,
+        fxRate: order.fxRate || 1,
+        fxMarkupPct: order.fxMarkupPct || 0,
+        fxMarkupFee: order.fxMarkupFee || 0
       });
     } else {
       throw new Error(`Order not found for Razorpay order ID: ${orderId}`);
@@ -109,7 +117,7 @@ const processRazorpayEvent = async (event, payload) => {
         await sendEmail(
           user.email,
           'SmartPay - Refund Processed Notification',
-          `<p>Your refund of $${refundAmount.toFixed(2)} has been successfully processed for Transaction ${paymentId}.</p>`
+          `<p>Your refund of ${refundAmount.toFixed(2)} ${transaction.currency || 'USD'} has been successfully processed for Transaction ${paymentId}.</p>`
         );
       }
     } else {

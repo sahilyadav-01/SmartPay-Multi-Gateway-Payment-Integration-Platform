@@ -50,6 +50,12 @@ graph TD
 * Detailed database records containing source gateway, event type, status, and raw JSON payloads.
 * Admin panel interface for viewing payloads, tracking errors, and manually re-triggering failed callback runs (e.g. recovering from database outages during invoice generation).
 
+### 6. Dynamic FX Markup & Currency Converter
+* Automatically handles cross-currency checkouts when preferred customer currency differs from base catalog currency (USD).
+* Customizable exchange rate conversions and profit markup percentage splits (e.g. charging 2.5% fee on USD -> INR conversions) configured by administrators.
+* Logs original cart amounts, exchange rates, markup percentages, markup fees, and final converted amounts inside Order & Transaction records.
+* Interactive FX Converter playground widget in the Admin panel to simulate, dry-run, and audit conversions.
+
 ---
 
 ## 🛠️ Technology Stack
@@ -122,6 +128,12 @@ Detailed body parameters and specifications can be reviewed in the [API Spec Doc
 * `POST /api/webhooks/razorpay` (Public) - Raw callback notification handler.
 * `GET /api/webhooks/logs` (Admin Only) - Query chronological audit history.
 * `POST /api/webhooks/logs/:id/retry` (Admin Only) - Manually reprocess failed callbacks.
+
+### FX Markup & Conversions Config
+* `GET /api/fx-rules` (Admin Only) - Retrieve all defined FX configuration rules.
+* `POST /api/fx-rules` (Admin Only) - Define a new target currency exchange rate and profit markup percentage.
+* `PUT /api/fx-rules/:id` (Admin Only) - Update existing exchange rate or markup splits.
+* `DELETE /api/fx-rules/:id` (Admin Only) - Delete an FX configuration.
 
 ---
 

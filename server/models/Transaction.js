@@ -27,7 +27,23 @@ const TransactionSchema = new mongoose.Schema({
   },
   currency: {
     type: String,
-    default: 'INR'
+    default: 'USD'
+  },
+  originalAmount: {
+    type: Number,
+    default: 0
+  },
+  fxRate: {
+    type: Number,
+    default: 1
+  },
+  fxMarkupPct: {
+    type: Number,
+    default: 0
+  },
+  fxMarkupFee: {
+    type: Number,
+    default: 0
   },
   status: {
     type: String,

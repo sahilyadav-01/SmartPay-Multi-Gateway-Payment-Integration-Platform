@@ -204,6 +204,29 @@ export const api = {
     }
   },
 
+  fx: {
+    list: async () => {
+      return await request('/api/fx-rules');
+    },
+    create: async (fxData) => {
+      return await request('/api/fx-rules', {
+        method: 'POST',
+        body: JSON.stringify(fxData)
+      });
+    },
+    update: async (id, fxData) => {
+      return await request(`/api/fx-rules/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(fxData)
+      });
+    },
+    delete: async (id) => {
+      return await request(`/api/fx-rules/${id}`, {
+        method: 'DELETE'
+      });
+    }
+  },
+
   webhooks: {
     getLogs: async () => {
       return await request('/api/webhooks/logs');
